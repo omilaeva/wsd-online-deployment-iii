@@ -1,0 +1,11 @@
+<h1>Chat</h1>
+
+<form method="POST" action="/">
+    <input type="text" name="sender"/></br>
+    <input type="text" name="message"/></br>
+    <input type="submit" value="Post"/>
+</form>
+
+<% it.postings.forEach((posting) => { %>
+    <p> <%= posting.sender%>: <%= posting.message %></p>
+<% }); %>

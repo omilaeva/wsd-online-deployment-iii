@@ -1,7 +1,7 @@
-import { serve } from "./deps.js";
-import { configure, renderFile } from "./deps.js";
-import { sql } from "./database/database.js";
-
+import { serve } from "https://deno.land/std@0.222.1/http/server.ts";
+import { configure, renderFile } from "https://deno.land/x/eta@v2.2.0/mod.ts";
+import * as chatService from "./services/chatService.js";
+  
 configure({
   views: `${Deno.cwd()}/views/`,
 });
@@ -10,28 +10,36 @@ const responseDetails = {
   headers: { "Content-Type": "text/html;charset=UTF-8" },
 };
 
-const data = {
-  count: 0,
+const redirectTo = (path) => {
+  return new Response(`Redirecting to ${path}.`, {
+    status: 303,
+    headers: {
+      "Location": path,
+    },
+  });
+};
+
+const mainPage = "/";
+
+const saveMessage = async (request) => {
+    const formData = await request.formData();
+    await chatService.saveMessage(formData.get("sender"), formData.get("message"));
 };
 
 const handleRequest = async (request) => {
-  const url = new URL(request.url);
-  if (url.pathname === "/count") {
-    data.count++;
-    return new Response(await renderFile("count.eta", data), responseDetails);
-  }
-
-  if (url.pathname === "/addresses") {
-    const rows = await sql`SELECT COUNT(*) as count FROM addresses`;
-    let rowCount = -42;
-    if (rows.length > 0) {
-      rowCount = rows[0].count;
+    const url = new URL(request.url);
+    if (url.pathname === "/") {
+        if (request.method === "GET") {
+            const data = {
+                postings: await chatService.getFiveRecentMessages(),
+            };
+            return new Response(await renderFile("index.eta", data), responseDetails);
+        } else if (request.method === "POST") {
+            await saveMessage(request);
+            return redirectTo(mainPage);
+        }
     }
-
-    return new Response(`Total rows: ${rowCount}`);
-  }
-
-  return new Response("Hello you!");
+    return redirectTo(mainPage);
 };
 
 serve(handleRequest, { port: 7777 });
